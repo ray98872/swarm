@@ -365,7 +365,8 @@
         <p>
           Second, <strong>failure isolation</strong>. In a pipeline, a stalled
           stage blocks everything behind it. In a star, each agent has its own
-          timeout (~20s); if one times out it returns an empty result with
+          timeout (~25s, with the search step itself hard-capped well below
+          that); if one times out it returns an empty result with
           <code>confidence: 0.0</code> and the synthesis step simply proceeds
           with the other four. Graceful degradation falls out of the topology
           for free.

@@ -24,10 +24,12 @@ from . import config
 
 # Serialise search network calls to avoid burst rate-limiting (default: 1 at a time).
 _DDG_SEM = asyncio.Semaphore(config.DDG_CONCURRENCY)
-# ddgs 9.x is a metasearch lib. "auto" rotates across engines; the explicit list
-# is a second pass over engines that stay reachable from datacenter IPs without
-# keys. (Engines that block one IP rarely block all of these at once.)
-_DDG_BACKENDS = ("auto", "bing, mojeek, brave, duckduckgo, startpage")
+# ddgs 9.x is a metasearch lib. Keep the engine set small and fast: "auto" first,
+# then a short two-engine fallback. A long fallback list multiplies latency on a
+# weak query (each engine request can take up to the HTTP timeout), which is what
+# pushed the benchmark agent past its budget. The web_search() deadline below is
+# the real guard; this just keeps the common path quick and deterministic.
+_DDG_BACKENDS = ("auto", "duckduckgo, bing")
 
 
 @dataclass
@@ -96,16 +98,33 @@ def _ddg_search_sync(query: str, max_results: int) -> list[SearchHit]:
 
 
 async def web_search(query: str, max_results: int | None = None) -> list[SearchHit]:
-    """Throttled, retrying DuckDuckGo search. Returns [] only after all attempts fail."""
+    """Throttled, retrying, time-bounded metasearch.
+
+    Hard-capped at ``SEARCH_TIMEOUT_S`` total wall-clock across all retries, so a
+    slow metasearch can never eat an agent's whole budget. Returns [] if the cap
+    is hit or every attempt comes back empty (the agent then degrades cleanly).
+    """
     n = max_results or config.MAX_SEARCH_RESULTS
+    loop = asyncio.get_event_loop()
+    deadline = loop.time() + config.SEARCH_TIMEOUT_S
     async with _DDG_SEM:
         hits: list[SearchHit] = []
         for attempt in range(config.DDG_RETRIES):
-            hits = await asyncio.to_thread(_ddg_search_sync, query, n)
+            remaining = deadline - loop.time()
+            if remaining <= 0.5:
+                break
+            try:
+                hits = await asyncio.wait_for(
+                    asyncio.to_thread(_ddg_search_sync, query, n), timeout=remaining
+                )
+            except asyncio.TimeoutError:
+                break  # search budget exhausted — degrade rather than hang
             if hits:
                 return hits
-            # Backoff with jitter before retrying a throttled endpoint.
-            await asyncio.sleep(0.7 * (attempt + 1) + random.random() * 0.5)
+            # Backoff with jitter, but never sleep past the deadline.
+            nap = min(0.7 * (attempt + 1) + random.random() * 0.4, max(0.0, deadline - loop.time()))
+            if nap > 0:
+                await asyncio.sleep(nap)
         return hits
 
 

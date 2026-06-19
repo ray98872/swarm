@@ -16,12 +16,15 @@ MODEL_FAST: str = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
 MODEL_SYNTH: str = os.getenv("GROQ_MODEL_SYNTH", "llama-3.3-70b-versatile")
 
 # --- Timeouts / limits ------------------------------------------------------
-# Per-agent budget. Slightly above 15s because DDG calls are serialised
-# (see retrieval.py): a queued agent may wait for earlier searches first.
-AGENT_TIMEOUT_S: float = float(os.getenv("AGENT_TIMEOUT_S", "20"))
+# Per-agent budget, sized so search + page-fetch + extraction comfortably fit:
+#   SEARCH_TIMEOUT_S (≤8) + page fetch (≤5) + extraction (a few s) < AGENT_TIMEOUT_S
+AGENT_TIMEOUT_S: float = float(os.getenv("AGENT_TIMEOUT_S", "25"))
 SYNTH_TIMEOUT_S: float = float(os.getenv("SYNTH_TIMEOUT_S", "25"))
 LLM_HTTP_TIMEOUT_S: float = float(os.getenv("LLM_HTTP_TIMEOUT_S", "20"))
-HTTP_TIMEOUT_S: float = float(os.getenv("HTTP_TIMEOUT_S", "6"))
+HTTP_TIMEOUT_S: float = float(os.getenv("HTTP_TIMEOUT_S", "5"))
+# Hard wall-clock cap on a single web_search call (across all retries/backends),
+# so a slow metasearch can never consume an agent's whole budget.
+SEARCH_TIMEOUT_S: float = float(os.getenv("SEARCH_TIMEOUT_S", "8"))
 MAX_SEARCH_RESULTS: int = int(os.getenv("MAX_SEARCH_RESULTS", "6"))
 
 # Web-search throttling: how many DuckDuckGo calls may run at once (across all
@@ -30,7 +33,7 @@ MAX_SEARCH_RESULTS: int = int(os.getenv("MAX_SEARCH_RESULTS", "6"))
 # benchmark/risk aren't starved) while still avoiding the all-at-once burst that
 # trips search-engine rate limits.
 DDG_CONCURRENCY: int = int(os.getenv("DDG_CONCURRENCY", "2"))
-DDG_RETRIES: int = int(os.getenv("DDG_RETRIES", "3"))
+DDG_RETRIES: int = int(os.getenv("DDG_RETRIES", "2"))
 
 # Groq resilience: cap concurrent LLM calls (the 5 agents would otherwise burst
 # the free-tier per-minute limit at once) and retry 429/5xx with backoff.
