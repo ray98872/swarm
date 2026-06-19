@@ -26,7 +26,10 @@ MAX_SEARCH_RESULTS: int = int(os.getenv("MAX_SEARCH_RESULTS", "6"))
 
 # Web-search throttling: how many DuckDuckGo calls may run at once (across all
 # agents) and how many times to retry a throttled/empty search.
-DDG_CONCURRENCY: int = int(os.getenv("DDG_CONCURRENCY", "1"))
+# 2 concurrent search lanes: drains the queue ~2x faster (so later agents like
+# benchmark/risk aren't starved) while still avoiding the all-at-once burst that
+# trips search-engine rate limits.
+DDG_CONCURRENCY: int = int(os.getenv("DDG_CONCURRENCY", "2"))
 DDG_RETRIES: int = int(os.getenv("DDG_RETRIES", "3"))
 
 # Groq resilience: cap concurrent LLM calls (the 5 agents would otherwise burst

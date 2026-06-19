@@ -18,15 +18,16 @@ class BenchmarkAgent(BaseAgent):
     name = "benchmark"
 
     async def _run(self, question: str, context: dict | None = None) -> AgentResult:
+        # ONE lightly-qualified search. A heavier "benchmark throughput latency
+        # comparison" query returns little for niche topics, which used to
+        # trigger retries + a second fallback search and push this agent past its
+        # timeout. A single reliable search keeps it inside budget; the
+        # benchmark-focused extraction below applies the performance lens to the
+        # full fetched pages.
         hits = await web_search(
-            f"{question} benchmark performance comparison",
+            f"{question} performance",
             max_results=config.MAX_SEARCH_RESULTS,
         )
-        # Keyword-stuffed queries can return nothing from the search engines;
-        # fall back to the plain question (which reliably returns results) and
-        # let the benchmark-focused extraction surface any perf numbers present.
-        if not hits:
-            hits = await web_search(question, max_results=config.MAX_SEARCH_RESULTS)
         if not hits:
             return AgentResult(agent_name=self.name, confidence=0.0, error="no search results")
 
