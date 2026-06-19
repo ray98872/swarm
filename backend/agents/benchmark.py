@@ -19,9 +19,14 @@ class BenchmarkAgent(BaseAgent):
 
     async def _run(self, question: str, context: dict | None = None) -> AgentResult:
         hits = await web_search(
-            f"{question} benchmark performance throughput latency comparison",
+            f"{question} benchmark performance comparison",
             max_results=config.MAX_SEARCH_RESULTS,
         )
+        # Keyword-stuffed queries can return nothing from the search engines;
+        # fall back to the plain question (which reliably returns results) and
+        # let the benchmark-focused extraction surface any perf numbers present.
+        if not hits:
+            hits = await web_search(question, max_results=config.MAX_SEARCH_RESULTS)
         if not hits:
             return AgentResult(agent_name=self.name, confidence=0.0)
 

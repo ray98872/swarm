@@ -26,9 +26,13 @@ class RiskAgent(BaseAgent):
 
     async def _run(self, question: str, context: dict | None = None) -> AgentResult:
         hits = await web_search(
-            f"{question} risks problems downsides breaking changes caveats migration issues",
+            f"{question} limitations risks drawbacks",
             max_results=config.MAX_SEARCH_RESULTS,
         )
+        # Fall back to the plain question if the focused query returns nothing;
+        # the risk-focused extraction still pulls caveats from general articles.
+        if not hits:
+            hits = await web_search(question, max_results=config.MAX_SEARCH_RESULTS)
 
         corpus_parts = [f"{h.title}\n{h.snippet}\n({h.url})" for h in hits if h.snippet]
         citations = [h.url for h in hits if h.url][:5]
