@@ -1,3 +1,7 @@
+import { AGENTS } from "../config.js";
+
+const LABELS = Object.fromEntries(AGENTS.map((a) => [a.id, a.label]));
+
 function List({ items }) {
   if (!items || items.length === 0) return <p style={{ color: "var(--text-faint)", fontSize: 13 }}>None reported.</p>;
   return (
@@ -16,6 +20,10 @@ export default function ReportView({ report }) {
   const total = report.elapsed_ms_total || 0;
   const seq = report.elapsed_ms_sequential_estimate || 0;
   const saved = seq > total ? ((seq - total) / 1000).toFixed(1) : null;
+
+  // Agents that returned no findings, with the reason the orchestrator recorded.
+  const agents = report.agents || [];
+  const failed = agents.filter((a) => !a.findings || a.findings.length === 0);
 
   return (
     <div className="report">
@@ -60,6 +68,27 @@ export default function ReportView({ report }) {
               </li>
             ))}
           </ol>
+        </div>
+      )}
+
+      {failed.length > 0 && (
+        <div className="diagnostics">
+          <h3>Agent diagnostics</h3>
+          <p className="diag-note">
+            {failed.length} of {agents.length} agents returned no findings — the report
+            above was synthesised from the rest (graceful degradation).
+          </p>
+          <ul>
+            {failed.map((a) => (
+              <li key={a.agent_name}>
+                <span className="diag-agent">{LABELS[a.agent_name] || a.agent_name}</span>
+                <span className="diag-reason">{a.error || "no findings returned"}</span>
+                {a.elapsed_ms != null && (
+                  <span className="diag-time">{(a.elapsed_ms / 1000).toFixed(1)}s</span>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
