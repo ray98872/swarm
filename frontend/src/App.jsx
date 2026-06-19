@@ -66,6 +66,7 @@ export default function App() {
         confidence: d.confidence,
         elapsed_ms: d.elapsed_ms,
         findings_count: d.findings_count,
+        agentError: d.error,
       });
     });
 

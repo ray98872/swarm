@@ -47,10 +47,10 @@ class RiskAgent(BaseAgent):
             )
 
         if not corpus_parts:
-            return AgentResult(agent_name=self.name, confidence=0.0)
+            return AgentResult(agent_name=self.name, confidence=0.0, error="no search results")
 
         corpus = "\n\n".join(corpus_parts)
-        findings, llm_conf = await extract_findings(
+        findings, llm_conf, note = await extract_findings(
             role="risk and caveat analyst (enumerate concrete risks, gaps, "
             "contradictions, breaking changes, and conditions under which the "
             "answer flips)",
@@ -63,4 +63,5 @@ class RiskAgent(BaseAgent):
             findings=findings,
             citations=citations,
             confidence=confidence,
+            error=note,
         )

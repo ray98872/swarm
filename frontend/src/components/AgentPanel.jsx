@@ -31,6 +31,13 @@ function AgentCard({ agent, state }) {
           <span>{state.elapsed_ms != null ? `${(state.elapsed_ms / 1000).toFixed(1)}s` : ""}</span>
         </div>
       )}
+      {status === "failed" && state?.agentError && (
+        <div className="status" style={{ color: "var(--text-faint)" }} title={state.agentError}>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {state.agentError}
+          </span>
+        </div>
+      )}
       <div className="shimmer" />
     </div>
   );

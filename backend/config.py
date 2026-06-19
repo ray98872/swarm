@@ -29,6 +29,11 @@ MAX_SEARCH_RESULTS: int = int(os.getenv("MAX_SEARCH_RESULTS", "6"))
 DDG_CONCURRENCY: int = int(os.getenv("DDG_CONCURRENCY", "1"))
 DDG_RETRIES: int = int(os.getenv("DDG_RETRIES", "3"))
 
+# Groq resilience: cap concurrent LLM calls (the 5 agents would otherwise burst
+# the free-tier per-minute limit at once) and retry 429/5xx with backoff.
+GROQ_CONCURRENCY: int = int(os.getenv("GROQ_CONCURRENCY", "2"))
+GROQ_RETRIES: int = int(os.getenv("GROQ_RETRIES", "4"))
+
 # --- CORS -------------------------------------------------------------------
 # Comma-separated list of allowed origins. Defaults cover the portfolio site
 # plus local dev. Override with ALLOWED_ORIGINS in production if needed.

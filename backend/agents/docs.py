@@ -36,7 +36,7 @@ class DocsAgent(BaseAgent):
             f"{question} official documentation docs", max_results=config.MAX_SEARCH_RESULTS
         )
         if not hits:
-            return AgentResult(agent_name=self.name, confidence=0.0)
+            return AgentResult(agent_name=self.name, confidence=0.0, error="no search results")
 
         # Prefer doc-like URLs, then fall back to the rest.
         doc_like = [h for h in hits if any(k in h.url.lower() for k in _DOC_HINTS)]
@@ -57,7 +57,7 @@ class DocsAgent(BaseAgent):
             used_urls = [h.url for h in ordered if h.url][:4]
 
         corpus = "\n\n".join(corpus_parts)
-        findings, llm_conf = await extract_findings(
+        findings, llm_conf, note = await extract_findings(
             role="official documentation specialist",
             question=question,
             corpus=corpus,
@@ -68,4 +68,5 @@ class DocsAgent(BaseAgent):
             findings=findings,
             citations=used_urls[:5],
             confidence=confidence,
+            error=note,
         )

@@ -6,18 +6,26 @@ Flow:
      events as the swarm runs: agent_start, agent_done, synthesis_start,
      report_ready (or error).
 
-Sessions are kept in-process (a dict). That's fine for a single always-on
-Fly.io instance serving demo traffic; the "what I'd do at scale" section of the
-write-up covers Redis pub/sub for multi-worker deployments.
+Sessions are kept in-process (a dict). That's fine for a single-container
+Hugging Face Space serving demo traffic; the "what I'd do at scale" section of
+the write-up covers Redis pub/sub for multi-worker deployments.
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
+
+# Route swarm.* loggers (Groq retries, extraction errors) to stdout so failures
+# are visible in the Hugging Face Space container logs.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:%(name)s:%(message)s",
+)
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware

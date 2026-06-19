@@ -19,12 +19,12 @@ class WebSearchAgent(BaseAgent):
     async def _run(self, question: str, context: dict | None = None) -> AgentResult:
         hits = await web_search(question, max_results=config.MAX_SEARCH_RESULTS)
         if not hits:
-            return AgentResult(agent_name=self.name, confidence=0.0)
+            return AgentResult(agent_name=self.name, confidence=0.0, error="no search results")
 
         corpus = "\n\n".join(
             f"[{i+1}] {h.title}\n{h.snippet}\n({h.url})" for i, h in enumerate(hits)
         )
-        findings, llm_conf = await extract_findings(
+        findings, llm_conf, note = await extract_findings(
             role="web search specialist",
             question=question,
             corpus=corpus,
@@ -36,4 +36,5 @@ class WebSearchAgent(BaseAgent):
             findings=findings,
             citations=citations,
             confidence=confidence,
+            error=note,
         )

@@ -28,7 +28,7 @@ class BenchmarkAgent(BaseAgent):
         if not hits:
             hits = await web_search(question, max_results=config.MAX_SEARCH_RESULTS)
         if not hits:
-            return AgentResult(agent_name=self.name, confidence=0.0)
+            return AgentResult(agent_name=self.name, confidence=0.0, error="no search results")
 
         target_urls = [h.url for h in hits if h.url][:3]
         pages = await fetch_many(target_urls, max_chars=5000)
@@ -44,7 +44,7 @@ class BenchmarkAgent(BaseAgent):
             used_urls = [h.url for h in hits if h.url][:4]
 
         corpus = "\n\n".join(corpus_parts)
-        findings, llm_conf = await extract_findings(
+        findings, llm_conf, note = await extract_findings(
             role="performance benchmarking specialist (focus on concrete numbers, "
             "throughput, latency, memory, and measured deltas)",
             question=question,
@@ -56,4 +56,5 @@ class BenchmarkAgent(BaseAgent):
             findings=findings,
             citations=used_urls[:5],
             confidence=confidence,
+            error=note,
         )

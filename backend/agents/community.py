@@ -63,10 +63,10 @@ class CommunityAgent(BaseAgent):
         ddg_urls = [h.url for h in ddg_hits if h.url]
 
         if not hn_blocks and not ddg_blocks:
-            return AgentResult(agent_name=self.name, confidence=0.0)
+            return AgentResult(agent_name=self.name, confidence=0.0, error="no community sources")
 
         corpus = "\n\n".join(hn_blocks + ddg_blocks)
-        findings, llm_conf = await extract_findings(
+        findings, llm_conf, note = await extract_findings(
             role="developer community sentiment specialist (capture real-world "
             "experiences, gotchas, migration pain, and consensus or disagreement)",
             question=question,
@@ -81,4 +81,5 @@ class CommunityAgent(BaseAgent):
             findings=findings,
             citations=citations,
             confidence=confidence,
+            error=note,
         )

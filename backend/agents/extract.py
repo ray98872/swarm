@@ -5,12 +5,20 @@ hands it to the fast model with a role-specific instruction. The model returns
 a small JSON object: a list of concise factual findings and a self-assessed
 confidence. Keeping this in one place keeps every agent's extraction
 behaviour consistent.
+
+Returns a third value — a short failure ``note`` (or ``None`` on success) — so
+the agent can surface *why* it produced nothing (e.g. an LLM rate-limit error
+vs. genuinely irrelevant sources) instead of failing silently.
 """
 
 from __future__ import annotations
 
+import logging
+
 from .. import config
 from ..llm import GroqError, extract_json
+
+logger = logging.getLogger("swarm.extract")
 
 
 _SYSTEM_TMPL = (
@@ -37,10 +45,11 @@ async def extract_findings(
     question: str,
     corpus: str,
     max_findings: int = 5,
-) -> tuple[list[str], float]:
-    """Return (findings, confidence). Empty/0.0 on any failure."""
+) -> tuple[list[str], float, str | None]:
+    """Return (findings, confidence, note). note is None on success, else a
+    short reason the extraction produced nothing."""
     if not corpus.strip():
-        return [], 0.0
+        return [], 0.0, "no source material"
 
     system = _SYSTEM_TMPL.format(role=role)
     user = (
@@ -56,12 +65,15 @@ async def extract_findings(
             user=user,
             max_tokens=700,
         )
-    except GroqError:
-        return [], 0.0
+    except GroqError as exc:
+        # Surface + log: this is the failure that previously looked like a
+        # mysterious "search" failure but is really an LLM/rate-limit error.
+        logger.warning("extraction LLM error [%s]: %s", role[:24], exc)
+        return [], 0.0, f"LLM error: {exc}"
 
     findings = data.get("findings") or []
     if not isinstance(findings, list):
-        return [], 0.0
+        return [], 0.0, "malformed LLM output"
     findings = [str(f).strip() for f in findings if str(f).strip()][:max_findings]
 
     try:
@@ -69,4 +81,6 @@ async def extract_findings(
     except (TypeError, ValueError):
         conf = 0.0
     conf = max(0.0, min(conf, 0.95))
-    return findings, conf
+
+    note = None if findings else "no relevant findings in sources"
+    return findings, conf, note
