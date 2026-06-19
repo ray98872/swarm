@@ -3,16 +3,31 @@
 These are deliberately framework-free. The DuckDuckGo library is synchronous,
 so we run it inside ``asyncio.to_thread`` to avoid blocking the event loop while
 the five agents fan out concurrently.
+
+Reliability note: four of the five agents call ``web_search`` and the swarm
+fires them at the same instant. From a single (datacenter) IP that burst trips
+DuckDuckGo's rate limiter, so we funnel all DDG calls through a module-level
+semaphore — the agents still run in parallel, only the search *network call* is
+serialised — and retry with backoff, rotating across the metasearch engines
+(`ddgs` aggregates Bing, Brave, DuckDuckGo, Mojeek, Startpage and more).
 """
 
 from __future__ import annotations
 
 import asyncio
+import random
 from dataclasses import dataclass
 
 import httpx
 
 from . import config
+
+# Serialise search network calls to avoid burst rate-limiting (default: 1 at a time).
+_DDG_SEM = asyncio.Semaphore(config.DDG_CONCURRENCY)
+# ddgs 9.x is a metasearch lib. "auto" rotates across engines; the explicit list
+# is a second pass over engines that stay reachable from datacenter IPs without
+# keys. (Engines that block one IP rarely block all of these at once.)
+_DDG_BACKENDS = ("auto", "bing, mojeek, brave, duckduckgo, startpage")
 
 
 @dataclass
@@ -22,38 +37,76 @@ class SearchHit:
     snippet: str
 
 
-def _ddg_search_sync(query: str, max_results: int) -> list[SearchHit]:
-    """Blocking DuckDuckGo text search. Imported lazily so the module loads
-    even if the optional dependency is missing in a given environment."""
+def _import_ddgs():
+    """Return the DDGS class from whichever package is installed (ddgs preferred)."""
     try:
-        from duckduckgo_search import DDGS  # type: ignore
-    except ImportError:  # pragma: no cover - dependency always present in prod
-        try:
-            # The library was renamed to `ddgs`; support both.
-            from ddgs import DDGS  # type: ignore
-        except ImportError:
-            return []
+        from ddgs import DDGS  # maintained successor to duckduckgo-search
 
+        return DDGS
+    except ImportError:
+        try:
+            from duckduckgo_search import DDGS  # type: ignore
+
+            return DDGS
+        except ImportError:
+            return None
+
+
+def _to_hits(results) -> list[SearchHit]:
     hits: list[SearchHit] = []
-    try:
-        with DDGS() as ddgs:
-            for r in ddgs.text(query, max_results=max_results):
-                hits.append(
-                    SearchHit(
-                        title=(r.get("title") or "").strip(),
-                        url=(r.get("href") or r.get("url") or "").strip(),
-                        snippet=(r.get("body") or "").strip(),
-                    )
-                )
-    except Exception:
-        # Rate limits / transient network errors → empty list, agent degrades.
-        return hits
+    for r in results or []:
+        hits.append(
+            SearchHit(
+                title=(r.get("title") or "").strip(),
+                url=(r.get("href") or r.get("url") or "").strip(),
+                snippet=(r.get("body") or "").strip(),
+            )
+        )
     return hits
 
 
+def _ddg_search_sync(query: str, max_results: int) -> list[SearchHit]:
+    """Blocking metasearch (ddgs), trying each backend group until one yields hits."""
+    DDGS = _import_ddgs()
+    if DDGS is None:  # pragma: no cover - dependency present in prod
+        return []
+
+    try:
+        client = DDGS(timeout=int(config.HTTP_TIMEOUT_S))
+    except TypeError:  # very old signature with no timeout kwarg
+        client = DDGS()
+
+    for backend in _DDG_BACKENDS:
+        try:
+            # ddgs 9.x accepts `backend=` (engine name, comma-list, or "auto").
+            results = client.text(query, max_results=max_results, backend=backend)
+        except TypeError:
+            # Fallback for an older library signature with no `backend` kwarg.
+            try:
+                results = client.text(query, max_results=max_results)
+            except Exception:
+                continue
+        except Exception:
+            # Rate limit / transient error → try the next backend group.
+            continue
+        hits = _to_hits(results)
+        if hits:
+            return hits
+    return []
+
+
 async def web_search(query: str, max_results: int | None = None) -> list[SearchHit]:
+    """Throttled, retrying DuckDuckGo search. Returns [] only after all attempts fail."""
     n = max_results or config.MAX_SEARCH_RESULTS
-    return await asyncio.to_thread(_ddg_search_sync, query, n)
+    async with _DDG_SEM:
+        hits: list[SearchHit] = []
+        for attempt in range(config.DDG_RETRIES):
+            hits = await asyncio.to_thread(_ddg_search_sync, query, n)
+            if hits:
+                return hits
+            # Backoff with jitter before retrying a throttled endpoint.
+            await asyncio.sleep(0.7 * (attempt + 1) + random.random() * 0.5)
+        return hits
 
 
 async def fetch_text(url: str, max_chars: int = 6000) -> str:

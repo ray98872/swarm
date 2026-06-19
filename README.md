@@ -51,7 +51,7 @@ or `error` — it never hangs.
 | Backend | FastAPI + `asyncio`, Hugging Face Spaces free CPU (Docker) |
 | Sub-agent LLM | Groq `llama-3.1-8b-instant` |
 | Synthesis LLM | Groq `llama-3.3-70b-versatile` |
-| Web search | `duckduckgo-search` (no key) |
+| Web search | `ddgs` keyless metasearch (Bing/Brave/DuckDuckGo/Mojeek/…) |
 | Community data | Hacker News Algolia API (no auth) |
 | Docs/benchmarks | `httpx` + `BeautifulSoup` scraping |
 | Frontend | React + Vite, GitHub Pages |

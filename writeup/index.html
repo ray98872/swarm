@@ -365,7 +365,7 @@
         <p>
           Second, <strong>failure isolation</strong>. In a pipeline, a stalled
           stage blocks everything behind it. In a star, each agent has its own
-          15-second timeout; if one times out it returns an empty result with
+          timeout (~20s); if one times out it returns an empty result with
           <code>confidence: 0.0</code> and the synthesis step simply proceeds
           with the other four. Graceful degradation falls out of the topology
           for free.
@@ -405,8 +405,9 @@
 
         <div class="card">
           <div class="agent-row"><span class="tag">web_search</span>
-            <p>Broad, current coverage via the <code>duckduckgo-search</code>
-            library — no API key, no quota. The generalist that catches whatever
+            <p>Broad, current coverage via the keyless <code>ddgs</code>
+            metasearch library (aggregates Bing, Brave, DuckDuckGo, Mojeek and
+            more) — no API key, no quota. The generalist that catches whatever
             the specialists miss.</p></div>
           <div class="agent-row"><span class="tag">docs</span>
             <p>Biases its query toward official documentation domains, then

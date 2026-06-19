@@ -16,11 +16,18 @@ MODEL_FAST: str = os.getenv("GROQ_MODEL_FAST", "llama-3.1-8b-instant")
 MODEL_SYNTH: str = os.getenv("GROQ_MODEL_SYNTH", "llama-3.3-70b-versatile")
 
 # --- Timeouts / limits ------------------------------------------------------
-AGENT_TIMEOUT_S: float = float(os.getenv("AGENT_TIMEOUT_S", "15"))
+# Per-agent budget. Slightly above 15s because DDG calls are serialised
+# (see retrieval.py): a queued agent may wait for earlier searches first.
+AGENT_TIMEOUT_S: float = float(os.getenv("AGENT_TIMEOUT_S", "20"))
 SYNTH_TIMEOUT_S: float = float(os.getenv("SYNTH_TIMEOUT_S", "25"))
 LLM_HTTP_TIMEOUT_S: float = float(os.getenv("LLM_HTTP_TIMEOUT_S", "20"))
-HTTP_TIMEOUT_S: float = float(os.getenv("HTTP_TIMEOUT_S", "8"))
+HTTP_TIMEOUT_S: float = float(os.getenv("HTTP_TIMEOUT_S", "6"))
 MAX_SEARCH_RESULTS: int = int(os.getenv("MAX_SEARCH_RESULTS", "6"))
+
+# Web-search throttling: how many DuckDuckGo calls may run at once (across all
+# agents) and how many times to retry a throttled/empty search.
+DDG_CONCURRENCY: int = int(os.getenv("DDG_CONCURRENCY", "1"))
+DDG_RETRIES: int = int(os.getenv("DDG_RETRIES", "3"))
 
 # --- CORS -------------------------------------------------------------------
 # Comma-separated list of allowed origins. Defaults cover the portfolio site
