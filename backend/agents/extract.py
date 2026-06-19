@@ -19,6 +19,10 @@ _SYSTEM_TMPL = (
     "findings that bear on the question. Each finding must be one short, "
     "self-contained sentence and must be grounded in the sources — never "
     "invent facts. Prefer numbers, version specifics, and concrete behaviours. "
+    "Ignore any source that is a dictionary definition, grammar or word-usage "
+    "explanation, or otherwise not about the specific technologies or products "
+    "named in the question — treat such sources as irrelevant and do not extract "
+    "findings from them. "
     "Return strict JSON: "
     '{{"findings": ["..."], "confidence": 0.0}} '
     "where confidence (0-1) reflects how well the sources actually answer the "

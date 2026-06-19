@@ -42,6 +42,11 @@ def _build_user_prompt(question: str, results: list[AgentResult]) -> str:
     citation_pool: list[tuple[str, str]] = []  # (url, agent)
     seen: set[str] = set()
     for r in results:
+        # Only surface citations from agents that actually produced findings.
+        # A failed/empty agent's hits (e.g. dictionary results for a stray word)
+        # must never leak into the report's citation pool.
+        if not r.ok or not r.findings:
+            continue
         for url in r.citations:
             if url and url not in seen:
                 seen.add(url)
@@ -81,6 +86,8 @@ def _fallback_report(question: str, results: list[AgentResult]) -> Report:
     all_findings: list[str] = []
     for r in results:
         all_findings.extend(r.findings)
+        if not r.ok or not r.findings:
+            continue  # skip citations from agents that produced nothing usable
         for url in r.citations:
             if url and url not in seen:
                 seen.add(url)
