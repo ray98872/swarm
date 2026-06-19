@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+
+# Node / Vite
+node_modules/
+frontend/dist/
+*.local
+
+# Fly
+.fly/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
