@@ -39,7 +39,7 @@ export default function App() {
       ({ session_id: sessionId } = await res.json());
     } catch (e) {
       setError(
-        `Couldn't reach the backend (${e.message}). The free Fly.io instance may be waking up — try again in a few seconds.`
+        `Couldn't reach the backend (${e.message}). The free Hugging Face Space may be waking from sleep — give it ~30s and try again.`
       );
       setBusy(false);
       return;

@@ -23,7 +23,7 @@ deployed Swarm app — it's a staging area for the portfolio edit.
      label: "Multi-agent · RAG · SSE",
      title: "Research Agent Swarm",
      desc: "Five specialist agents fan out in parallel over a technical question — web search, docs, benchmarks, community signals and risk — then a synthesis agent merges their findings into a cited report.",
-     meta: "python · groq · fastapi · fly.io · sse",
+     meta: "python · groq · fastapi · hf spaces · sse",
      href: "https://ray98872.github.io/swarm/",          // live demo
      // writeup: "https://ray98872.github.io/swarm/writeup/", // if cards support a 2nd link
      graphic: <SwarmFanout />,

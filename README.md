@@ -8,7 +8,7 @@ cited report. The frontend streams live agent status over **SSE**, then renders
 the report.
 
 **Zero cost.** No paid tiers, no trials, no credit card — Groq free tier,
-DuckDuckGo + Hacker News (no keys), Fly.io free VM, GitHub Pages.
+DuckDuckGo + Hacker News (no keys), Hugging Face Spaces free CPU, GitHub Pages.
 
 - **Live demo:** https://ray98872.github.io/swarm/
 - **Write-up:** https://ray98872.github.io/swarm/writeup/
@@ -48,7 +48,7 @@ or `error` — it never hangs.
 
 | Layer | Choice |
 |---|---|
-| Backend | FastAPI + `asyncio`, Fly.io free VM (always-on) |
+| Backend | FastAPI + `asyncio`, Hugging Face Spaces free CPU (Docker) |
 | Sub-agent LLM | Groq `llama-3.1-8b-instant` |
 | Synthesis LLM | Groq `llama-3.3-70b-versatile` |
 | Web search | `duckduckgo-search` (no key) |
@@ -61,7 +61,7 @@ or `error` — it never hangs.
 ## Repo layout
 
 ```
-backend/      FastAPI app, orchestrator, 5 agents + synthesis, Dockerfile, fly.toml
+backend/      FastAPI app, orchestrator, 5 agents + synthesis, Dockerfile, HF Space README
 frontend/     React + Vite SPA (live agent cards + report view)
 writeup/      Standalone write-up page (dark/copper editorial design)
 portfolio-integration/   SwarmFanout.jsx + card snippet for the portfolio Bento grid
@@ -104,7 +104,7 @@ npm run dev        # http://localhost:5173  (auto-targets localhost:8080 backend
 
 1. Go to **https://console.groq.com** and sign in (Google/GitHub works).
 2. **API Keys → Create API Key**, copy it (starts with `gsk_`).
-3. Local: `export GROQ_API_KEY=gsk_...`  ·  Fly.io: `fly secrets set GROQ_API_KEY=gsk_...`
+3. Local: `export GROQ_API_KEY=gsk_...`  ·  HF Space: add it as a secret named `GROQ_API_KEY` (Settings → Variables and secrets)
 
 Free tier is ~30 requests/min per model; one query uses 6 calls (5 agents + 1
 synthesis), so it stays well inside the limit for a demo. The key is read from
@@ -114,7 +114,7 @@ the environment only — it is never committed (`.env` is git-ignored).
 
 ## Deploy
 
-See [`DEPLOY.md`](./DEPLOY.md) for the full step-by-step (GitHub repo, Fly.io
-backend, GitHub Pages frontend, and portfolio card).
+See [`DEPLOY.md`](./DEPLOY.md) for the full step-by-step (GitHub repo, Hugging
+Face Spaces backend, GitHub Pages frontend, and portfolio card).
 
 Built by Raihan Mahbub.

@@ -1,7 +1,8 @@
 # Deploying Swarm (all free tiers)
 
-Three pieces ship independently: the **GitHub repo**, the **Fly.io backend**,
-and the **GitHub Pages frontend**. Do them in this order.
+Three pieces ship independently: the **GitHub repo**, the **Hugging Face Spaces
+backend** (free, no credit card), and the **GitHub Pages frontend**. Do them in
+this order.
 
 ---
 
@@ -36,32 +37,49 @@ git push -u origin main
 
 ---
 
-## 2. Deploy the backend to Fly.io
+## 2. Deploy the backend to Hugging Face Spaces (free, no card)
 
-Free tier, always-on, no credit card needed for the small shared VM.
+Fly.io is no longer £0 (it now requires a credit card and bills ~$1.94/mo for
+an always-on VM), so the backend deploys to a free **Hugging Face Space** using
+the Docker SDK on **CPU Basic** hardware. No credit card. The container runs
+persistently, so the SSE stream and in-memory sessions work unchanged. (A free
+Space sleeps after ~48h of inactivity and cold-starts on the next request.)
 
-```bash
-# Install flyctl once: https://fly.io/docs/flyctl/install/
-fly auth signup        # or: fly auth login
-cd backend
-fly launch --no-deploy        # accept the existing fly.toml; pick a unique app
-                              # name if "swarm-backend" is taken
-fly secrets set GROQ_API_KEY=gsk_your_key_here     # see README → Get a Groq key
-fly deploy
-fly open /health              # should return {"status":"ok","groq":true,...}
-```
+1. Sign in / sign up at https://huggingface.co (free, no card).
+2. Create the Space: **New → Space** → owner `ray98872`, name `swarm-backend`,
+   **SDK = Docker**, hardware **CPU Basic (free)**, visibility Public.
+3. Add the Groq key as a secret: in the Space, **Settings → Variables and
+   secrets → New secret** → name `GROQ_API_KEY`, value `gsk_...`
+   (see README → *Get a Groq key*).
+4. Push the **`backend/` folder contents** to the Space's git repo. From the
+   project root:
+
+   ```bash
+   cd backend
+   git init
+   git add -A
+   git commit -m "Swarm backend"
+   git remote add space https://huggingface.co/spaces/ray98872/swarm-backend
+   git push space main --force      # HF will prompt for a write token as the password
+   ```
+
+   (Create a write token at https://huggingface.co/settings/tokens if asked.)
+5. The Space builds the Dockerfile automatically. When it's running, check:
+   `https://ray98872-swarm-backend.hf.space/health` → `{"status":"ok","groq":true,...}`
 
 Notes:
-- `fly.toml` is preconfigured for an always-on 256MB shared VM with a `/health`
-  check (no spin-down → no cold starts in the demo).
-- If you change the app name, update the frontend's backend URL in step 3.
+- `backend/README.md` carries the HF Space config (`sdk: docker`,
+  `app_port: 7860`); the Dockerfile listens on 7860 to match.
+- If you name the Space something other than `swarm-backend`, update the URL in
+  step 3 of section 3 below (and `frontend/src/config.js`).
 
 ---
 
 ## 3. Point the frontend at the backend
 
-The frontend defaults to `https://swarm-backend.fly.dev`. If your Fly app has a
-different name, set it at build time so the deployed site targets the right URL.
+The frontend defaults to `https://ray98872-swarm-backend.hf.space` (the HF Space
+URL pattern is `https://<owner>-<space-name>.hf.space`). If your Space has a
+different name, set the URL at build time so the deployed site targets it.
 
 Edit `.github/workflows/deploy.yml` — in the **Build** step add the env var:
 
@@ -69,10 +87,10 @@ Edit `.github/workflows/deploy.yml` — in the **Build** step add the env var:
       - name: Build
         run: npm run build
         env:
-          VITE_API_BASE: https://YOUR-APP-NAME.fly.dev
+          VITE_API_BASE: https://YOUR-OWNER-YOUR-SPACE.hf.space
 ```
 
-(Or just rename your Fly app to `swarm-backend` and skip this.)
+(Or just name the Space `swarm-backend` under owner `ray98872` and skip this.)
 
 ---
 
@@ -93,10 +111,11 @@ The Vite `base` is already set to `/swarm/`, and the workflow copies
 ## 5. CORS
 
 The backend already allows `https://ray98872.github.io` plus localhost. If you
-host the frontend somewhere else, set the origin on the backend:
+host the frontend somewhere else, add an `ALLOWED_ORIGINS` secret on the Space
+(Settings → Variables and secrets), comma-separated:
 
-```bash
-fly secrets set ALLOWED_ORIGINS="https://ray98872.github.io,https://your-other-host"
+```
+ALLOWED_ORIGINS = https://ray98872.github.io,https://your-other-host
 ```
 
 ---

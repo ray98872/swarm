@@ -6,7 +6,7 @@
     <title>Research Agent Swarm — write-up</title>
     <meta
       name="description"
-      content="How I built a zero-cost, custom-orchestrated multi-agent research system: star fan-out over five specialist agents, SSE streaming, Groq's two-model split, and Fly.io + GitHub Pages deployment."
+      content="How I built a zero-cost, custom-orchestrated multi-agent research system: star fan-out over five specialist agents, SSE streaming, Groq's two-model split, and Hugging Face Spaces + GitHub Pages deployment."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -484,7 +484,7 @@ event: report_ready   <span class="tok-com">{ ...full structured report... }</sp
           I used Server-Sent Events rather than WebSockets because the
           communication is <strong>one-directional</strong>: the server streams
           progress, the client only listens. SSE is plain HTTP — it works
-          through the Fly.io proxy and GitHub Pages CORS without a second
+          through the hosting proxy and GitHub Pages CORS without a second
           protocol, auto-reconnects in the browser, and needs no extra library.
           WebSockets would buy bidirectional messaging the app never uses, at
           the cost of more moving parts.
@@ -526,8 +526,9 @@ event: report_ready   <span class="tok-com">{ ...full structured report... }</sp
         <p>
           <strong>Cost per query: £0.</strong> Groq’s free tier covers the LLM
           calls, DuckDuckGo and the Hacker News Algolia API need no keys, the
-          backend runs on a free always-on Fly.io VM, and the frontend is static
-          on GitHub Pages. There is no paid tier or trial anywhere in the stack.
+          backend runs on a free Hugging Face Space (CPU Basic, no credit card),
+          and the frontend is static on GitHub Pages. There is no paid tier or
+          trial anywhere in the stack.
         </p>
       </section>
 
@@ -537,16 +538,16 @@ event: report_ready   <span class="tok-com">{ ...full structured report... }</sp
         <h2>Where the demo’s shortcuts would break</h2>
         <p>
           The current build keeps sessions in an in-process dictionary and runs
-          a single Fly.io worker. That’s the right call for a portfolio demo,
-          but it’s also exactly where I’d change things if real traffic showed
-          up:
+          a single worker on one free container. That’s the right call for a
+          portfolio demo, but it’s also exactly where I’d change things if real
+          traffic showed up:
         </p>
         <ul>
           <li><strong>Worker pool + Redis pub/sub.</strong> In-memory sessions
             tie the SSE stream to the one process that created it. Moving session
             state and agent events onto Redis pub/sub lets any worker serve any
-            client’s stream, so I could scale horizontally behind the Fly.io
-            proxy.</li>
+            client’s stream, so I could scale horizontally behind the load
+            balancer.</li>
           <li><strong>Persistent sessions &amp; result caching.</strong> Store
             completed reports keyed by a normalised question, so identical or
             similar queries return instantly and cheaply instead of re-running
@@ -563,7 +564,7 @@ event: report_ready   <span class="tok-com">{ ...full structured report... }</sp
 
       <hr />
       <p class="foot">
-        Built by Raihan Mahbub · Python · FastAPI · Groq · Fly.io · React · SSE ·
+        Built by Raihan Mahbub · Python · FastAPI · Groq · HF Spaces · React · SSE ·
         <a href="https://github.com/ray98872/swarm">github.com/ray98872/swarm</a>
         · <a href="https://ray98872.github.io">portfolio</a>
       </p>
